@@ -1,7 +1,7 @@
 '''
 Author: SPeak Shen
 Date: 2022-02-28 20:59:08
-LastEditTime: 2022-02-28 21:03:25
+LastEditTime: 2022-02-28 21:39:08
 LastEditors: SPeak Shen
 Description: 
 FilePath: /EasyUtils/test/testLog.py
@@ -19,6 +19,7 @@ sys.path.append(
 
 from src.eutils import ELog
 from src.eutils import getLogger
+from src.eutils import DEFAULT_LOGGER
 
 def printLog(level, logger=None):
 
@@ -59,7 +60,7 @@ if __name__ == "__main__":
 
     _thread.start_new_thread(printLog, (0, myLogger))
     _thread.start_new_thread(printLog, (1, myLogger))
-    _thread.start_new_thread(printLog, (2, myLogger))
+    _thread.start_new_thread(printLog, (2, DEFAULT_LOGGER))
     _thread.start_new_thread(printLog, (3, myLogger))
 
     time.sleep(10)

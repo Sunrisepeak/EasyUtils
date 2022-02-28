@@ -1,7 +1,7 @@
 '''
 Author: SPeak Shen
 Date: 2022-02-25 21:32:14
-LastEditTime: 2022-02-28 21:12:56
+LastEditTime: 2022-02-28 21:45:36
 LastEditors: SPeak Shen
 Description: a base log system...
 FilePath: /EasyUtils/src/eutils/ELog.py
@@ -165,18 +165,25 @@ class ELog(LogBase, threading.Thread):
         # self.qLock.release()
 
 
+DEFAULT_LOGGER = None
+
 def getLogger():
 
     log = ELog()
 
-    timeInfo = time.strftime("%Y-%m-%d_%H-%M-%S", time.localtime())
+    if DEFAULT_LOGGER is None:
 
-    defaultLogFile = os.getcwd() + "/" + timeInfo + "_" + "eutils.elog"
+        timeInfo = time.strftime("%Y-%m-%d_%H-%M-%S", time.localtime())
 
-    log.config(logFile=defaultLogFile)
-    log.config(console=False)
+        defaultLogFile = os.getcwd() + "/" + timeInfo + "_" + "eutils.elog"
 
-    log.info("default log system init done.")
+        log.config(logFile=defaultLogFile)
+
+        log.config(console=False)
+
+        log.info("default log system init.....")
+
+    log.info("log system init done.")
 
     log.start()
 
