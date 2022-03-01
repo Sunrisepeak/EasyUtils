@@ -1,7 +1,7 @@
 '''
 Author: SPeak Shen
 Date: 2022-02-25 21:32:14
-LastEditTime: 2022-02-28 20:56:59
+LastEditTime: 2022-03-01 15:23:17
 LastEditors: SPeak Shen
 Description: a tiny task manager
 FilePath: /EasyUtils/src/eutils/ETask.py
@@ -21,15 +21,15 @@ class ETask(threading.Thread):
     sleepTime = None
 
     def run(self):
-        print("start task:  ", id(self))
+        #print("start task:  ", id(self))
         if self.taskArgs == None:
             self.taskReturnInfo = self.task()
         else:
             self.taskReturnInfo = self.task(self.taskArgs)
-        print("end task:   ", id(self))
+        #print("end task:   ", id(self))
 
     def setTask(self, task, args=None):
-        print("...")
+        #print("...")
         self.task = task
         if args != None:
             self.taskArgs = args
@@ -45,7 +45,9 @@ class ETaskManager(threading.Thread):
     taskWaitList = []
     gcInterval = 1
     gcCnt = 0
-    runlistLimit = 10
+    
+    __mRunListLimit = 5
+    __mMaxTaskNums = 20
 
     waitListMutex = threading.Lock()
     runListMutex = threading.Lock()
@@ -55,7 +57,8 @@ class ETaskManager(threading.Thread):
         self.start()
 
     def addTask(self, task):
-        self.__addTaskToWaitList(task)
+        if len(self.taskRunList) + len(self.taskWaitList) < self.__mMaxTaskNums:
+            self.__addTaskToWaitList(task)
 
     def run(self):
         while True:
@@ -73,7 +76,7 @@ class ETaskManager(threading.Thread):
 
     def __scheduler(self):
 
-        while len(self.taskRunList) < self.runlistLimit and len(self.taskWaitList):
+        while len(self.taskRunList) < self.__mRunListLimit and len(self.taskWaitList):
             task = self.taskWaitList[0]
             self.__removeTaskFromWaitList(task)
             self.__addTaskToRunList(task)
@@ -83,7 +86,7 @@ class ETaskManager(threading.Thread):
 
         gcInfo = "try task gc: " +\
             "gc interval is " + str(self.gcInterval) +\
-            " gc times is " + str(self.gcCnt)
+            "; gc cnt = " + str(self.gcCnt)
 
         print(gcInfo)
 
@@ -96,9 +99,18 @@ class ETaskManager(threading.Thread):
                 else:
                     print("task %d: gc function is null" % id(task))
                 self.__removeTaskFromRunList(task)
-                print("task %d:  removed from taskList" % id(task))
+                #print("task %d:  removed from taskList" % id(task))
 
         self.gcCnt = self.gcCnt + 1
+        
+    def config(self, maxTaskNums=None, runListLimit=None):
+        
+        if maxTaskNums is not None:
+            self.__mMaxTaskNums = maxTaskNums
+        
+        if runListLimit is not None:
+            self.__mRunListLimit = runListLimit
+        
 
     """ mutex method """
 
@@ -124,7 +136,7 @@ class ETaskManager(threading.Thread):
 
 
 # defualt task manager
-DEFUALT_TASK_MANAGER = ETaskManager()
+# DEFUALT_TASK_MANAGER = ETaskManager()
 
 
 if __name__ == "__main__":
