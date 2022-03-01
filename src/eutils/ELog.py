@@ -1,7 +1,7 @@
 '''
 Author: SPeak Shen
 Date: 2022-02-25 21:32:14
-LastEditTime: 2022-02-28 21:45:36
+LastEditTime: 2022-03-01 15:21:38
 LastEditors: SPeak Shen
 Description: a base log system...
 FilePath: /EasyUtils/src/eutils/ELog.py
@@ -33,28 +33,28 @@ class LogBase(object):
     def info(self, message):
 
         if self._mLogLevel <= self._mLogLevelMap["info"]:
-            message = "[info]: " + message
+            message = "[info]: " + str(message)
 
             self._print(message)
 
     def debug(self, message):
 
         if self._mLogLevel <= self._mLogLevelMap["debug"]:
-            message = "[debug]: " + message
+            message = "[debug]: " + str(message)
 
             self._print(message)
 
     def warn(self, message):
 
         if self._mLogLevel <= self._mLogLevelMap["warn"]:
-            message = "[warn]: " + message
+            message = "[warn]: " + str(message)
 
             self._print(message)
 
     def error(self, message):
 
         if self._mLogLevel <= self._mLogLevelMap["error"]:
-            message = "[error]: " + message
+            message = "[error]: " + str(message)
 
             self._print(message)
 
@@ -88,7 +88,7 @@ class LogBase(object):
         try:
             self._mOutputFile = open(logFile, 'a+')
 
-            print("open file %s success" % logFile)
+            #print("open file %s success" % logFile)
 
         except Exception:
 
@@ -97,7 +97,7 @@ class LogBase(object):
 
     def __configLogLevel(self, logLevel):
 
-        print(logLevel)
+        print("method no implement...")
 
 
 class ELog(LogBase, threading.Thread):
@@ -137,7 +137,7 @@ class ELog(LogBase, threading.Thread):
                 print(logInfo)
 
             if self._mOutputFile is not None:
-                print("debug log file print....")
+                # print("debug log file print....")
 
                 try:
 
@@ -159,9 +159,9 @@ class ELog(LogBase, threading.Thread):
 
     def __exchangeMQ(self):
         # self.qLock.acquire()
-        print(self.__mInputQueue, self.__mOutputQueue)
+        # print(self.__mInputQueue, self.__mOutputQueue)
         self.__mInputQueue, self.__mOutputQueue = self.__mOutputQueue, self.__mInputQueue
-        print(self.__mInputQueue, self.__mOutputQueue)
+        # print(self.__mInputQueue, self.__mOutputQueue)
         # self.qLock.release()
 
 
@@ -190,7 +190,7 @@ def getLogger():
     return log
 
 
-DEFAULT_LOGGER = getLogger()
+# DEFAULT_LOGGER = getLogger()
 
 """ ----------------------------------------- Test Code ----------------------------------------- """
 
