@@ -1,7 +1,7 @@
 '''
 Author: SPeak Shen
 Date: 2022-02-28 20:59:08
-LastEditTime: 2022-02-28 21:39:08
+LastEditTime: 2022-03-09 21:23:44
 LastEditors: SPeak Shen
 Description: 
 FilePath: /EasyUtils/test/testLog.py
@@ -32,7 +32,7 @@ def printLog(level, logger=None):
 
     for i in range(0, 10):
 
-        message = info + "hello world " + str(i)
+        message = info + " hello world " + str(i)
 
         if level == 0:
             logger.info(message)
@@ -48,7 +48,7 @@ def printLog(level, logger=None):
 
 if __name__ == "__main__":
 
-    myLogger = getLogger()
+    myLogger = getLogger("my logger")
 
     lFile= os.getcwd() + "/eu_test.log"
 

@@ -1,7 +1,7 @@
 '''
 Author: SPeak Shen
 Date: 2022-02-25 21:32:14
-LastEditTime: 2022-03-01 15:21:38
+LastEditTime: 2022-03-09 21:24:28
 LastEditors: SPeak Shen
 Description: a base log system...
 FilePath: /EasyUtils/src/eutils/ELog.py
@@ -23,10 +23,13 @@ class LogBase(object):
     _mLogLevelMap = None
     _mLogLevel = None
 
-    def __init__(self):
+    __id = ""
+
+    def __init__(self, id=""):
 
         self._mLogLevelMap = {"error": 0, "warn": 1, "debug": 2, "info": 3}
         self._mLogLevel = self._mLogLevelMap["error"]
+        self.__id = id
 
         self.config(console=True)
 
@@ -68,7 +71,7 @@ class LogBase(object):
         processID = os.getpid()
         threadID = threading.current_thread().ident
 
-        return f"%s %d %d %d {message} " % (timeInfo, parentPocessID, processID, threadID)
+        return f"%s %d %d %d <%s> {message} " % (timeInfo, parentPocessID, processID, threadID, self.__id)
 
     def config(self, console=None, logFile=None, logLevel=None):
 
@@ -107,12 +110,18 @@ class ELog(LogBase, threading.Thread):
 
     qLock = threading.Lock()
 
-    def __init__(self):
+    def __init__(self, id=""):
         threading.Thread.__init__(self)
-        LogBase.__init__(self)
+        LogBase.__init__(self, id)
 
         self.__mInputQueue = Queue()
         self.__mOutputQueue = Queue()
+
+        # gen default log file
+        timeInfo = time.strftime("%Y-%m-%d", time.localtime())
+        defaultLogFile = os.getcwd() + "/eutils-" + timeInfo + "_" + ".elog.log"
+        
+        self.config(logFile=defaultLogFile)
 
     def run(self):
         i = 0
@@ -146,6 +155,8 @@ class ELog(LogBase, threading.Thread):
                 except Exception:
 
                     print("log output file filed....")
+            else:
+                self.config(logFile=self._mOutputFile)
 
         if self._mOutputFile is not None:
             self._mOutputFile.flush()
@@ -167,30 +178,24 @@ class ELog(LogBase, threading.Thread):
 
 DEFAULT_LOGGER = None
 
-def getLogger():
+def getLogger(logID=""):
 
-    log = ELog()
+    log = ELog(logID)
 
     if DEFAULT_LOGGER is None:
-
-        timeInfo = time.strftime("%Y-%m-%d_%H-%M-%S", time.localtime())
-
-        defaultLogFile = os.getcwd() + "/" + timeInfo + "_" + "eutils.elog"
-
-        log.config(logFile=defaultLogFile)
 
         log.config(console=False)
 
         log.info("default log system init.....")
 
-    log.info("log system init done.")
+    log.info("logger [%s] init done." % logID)
 
     log.start()
 
     return log
 
 
-# DEFAULT_LOGGER = getLogger()
+DEFAULT_LOGGER = getLogger("Easy Utils")
 
 """ ----------------------------------------- Test Code ----------------------------------------- """
 
