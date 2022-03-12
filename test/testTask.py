@@ -1,7 +1,7 @@
 '''
 Author: SPeak Shen
 Date: 2022-02-25 21:34:48
-LastEditTime: 2022-02-28 20:55:48
+LastEditTime: 2022-03-11 19:45:29
 LastEditors: SPeak Shen
 Description: 
 FilePath: /EasyUtils/test/testTask.py
@@ -34,17 +34,21 @@ def myTask2(arg):
         print("hello task2: ", str(i), arg)
         time.sleep(2)
 
+def myPreProcess():
+    pass
 
 def myTask2GC(task):
-    print("gc over...")
+    print("gc over... %s " % str(task._mSleepTime))
 
+def myPostProcess():
+    pass
 
 t1, t2 = Task(), Task()
 
 t1.setTask(myTask1)
-t2.setTask(myTask2, "11")
+t2.setTask(myTask2)
 
-t2.setGC(myTask2GC, 2)
+t2.setGC(myTask2GC)
 
 TASK_MANAGER.addTask(t1)
 TASK_MANAGER.addTask(t2)
