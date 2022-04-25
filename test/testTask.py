@@ -1,7 +1,7 @@
 '''
 Author: SPeak Shen
 Date: 2022-02-25 21:34:48
-LastEditTime: 2022-03-11 19:45:29
+LastEditTime: 2022-04-25 21:58:27
 LastEditors: SPeak Shen
 Description: 
 FilePath: /EasyUtils/test/testTask.py
@@ -32,7 +32,7 @@ def myTask1():
 def myTask2(arg):
     for i in range(0, 5):
         print("hello task2: ", str(i), arg)
-        time.sleep(2)
+        time.sleep(5)
 
 def myPreProcess():
     pass
@@ -46,9 +46,10 @@ def myPostProcess():
 t1, t2 = Task(), Task()
 
 t1.setTask(myTask1)
-t2.setTask(myTask2)
 
+t2.setTask(myTask2)
 t2.setGC(myTask2GC)
+t2.setMaxAliveTime(10)
 
 TASK_MANAGER.addTask(t1)
 TASK_MANAGER.addTask(t2)

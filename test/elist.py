@@ -1,7 +1,7 @@
 '''
 Author: SPeak Shen
 Date: 2022-03-12 12:27:00
-LastEditTime: 2022-03-12 14:35:02
+LastEditTime: 2022-04-25 20:39:24
 LastEditors: SPeak Shen
 Description: 
 FilePath: /EasyUtils/test/elist.py
@@ -24,6 +24,13 @@ ln2 = LNode(6, next=ln1)
 ln3 = ln2.next
 ln4 = ln1
 ln5 = LNode(5)
+
+ls = []
+ls.append(ln1)
+ls.append(ln2)
+ls.append(ln3)
+ls.append(ln4)
+ls.append(ln5)
 
 print(ln1, "data = " + str(ln1.data))
 print(ln2, "data = " + str(ln2.data))
@@ -78,3 +85,8 @@ print()
 
 for val in el:
     print(val, " ", end="")
+
+print()
+
+for l in ls:
+    print(l.data, " ", end="")

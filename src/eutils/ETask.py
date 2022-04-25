@@ -1,7 +1,7 @@
 '''
 Author: SPeak Shen
 Date: 2022-02-25 21:32:14
-LastEditTime: 2022-03-11 19:58:37
+LastEditTime: 2022-04-25 21:41:37
 LastEditors: SPeak Shen
 Description: a tiny task manager
 FilePath: /EasyUtils/src/eutils/ETask.py
@@ -39,6 +39,8 @@ class ETask(threading.Thread):
 
     _mSleepTime = None
 
+    _mAliveTime = 0x616c697665
+
     def run(self):
         
         for status, task in self.__mTasks.items():
@@ -62,6 +64,9 @@ class ETask(threading.Thread):
 
     def setGC(self, gc):
         self._mGC = gc
+
+    def setMaxAliveTime(self, sec):
+        self._mAliveTime = sec
 
 
 
@@ -117,8 +122,7 @@ class ETaskManager(threading.Thread):
         DEFAULT_LOGGER.info(gcInfo)
 
         for task in self.__taskRunList:
-
-            if not task.isAlive():
+            if not task.isAlive() or task._mAliveTime < 0:
                 if None != task._mGC:
                     # start gc listen thread...
                     _thread.start_new_thread(task._mGC, (task, ))
@@ -126,6 +130,9 @@ class ETaskManager(threading.Thread):
                     print("task %d: gc function is null" % id(task))
                 self.__removeTaskFromRunList(task)
                 #print("task %d:  removed from taskList" % id(task))
+            else:
+                task._mAliveTime = task._mAliveTime - self.__gcInterval
+
 
         self.__gcCnt = self.__gcCnt + 1
         
