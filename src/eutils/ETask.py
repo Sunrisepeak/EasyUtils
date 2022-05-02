@@ -1,12 +1,4 @@
-'''
-Author: SPeak Shen
-Date: 2022-02-25 21:32:14
-LastEditTime: 2022-04-25 21:41:37
-LastEditors: SPeak Shen
-Description: a tiny task manager
-FilePath: /EasyUtils/src/eutils/ETask.py
-trying to hard.....
-'''
+
 # Base
 import threading
 import _thread
@@ -15,161 +7,186 @@ import time
 # Data structure
 from queue import Queue
 
-# EUtils modules
-from . import DEFAULT_LOGGER
+from src.eutils.ELog import getLogger
 
+class _ETask(threading.Thread):
 
-class ETask(threading.Thread):
+    # life circle control
+    _sleep = True
+    _alive = True
 
-    _mTaskArgs = None
-    _mTaskReturnInfo = None
+    # actual task
+    _task = None
 
-    # Process order
-    # function map table, type is 'def func(this)'
-    __mTasks = {
-        "preProcess" : None,
-        "task" : None,
-        "postProcess" : None 
-    }
-
-    _mGC = None
-    
-    # Task attribute
-    _mTaskStatus = None
-
-    _mSleepTime = None
-
-    _mAliveTime = 0x616c697665
+    def __init__(self, task=None):
+        threading.Thread.__init__(self)
+        self._task = task
 
     def run(self):
-        
-        for status, task in self.__mTasks.items():
 
-            if task is not None:
-                self._mTaskStatus = status
-                task(self)
+        while self._alive:
+            if self._sleep != True:
+                self._task.start()
+                self._sleep = True
+            else:
+                time.sleep(1) # wait task
 
-    def setTasks(tasks=[]):
-        if len(tasks) == 3:
-            self.__mTasks = tasks
 
-    def setPreProcess(self, preProc):
-        self.__mTasks["preProcess"] = preProc
 
-    def setTask(self, task):
-        self.__mTasks["task"] = task
+class ETask():
 
-    def setPostProcess(self, postProc):
-        self.__mTasks["postProcess"] = postProc
+    _inPort = None
+    _outPort = None
 
-    def setGC(self, gc):
-        self._mGC = gc
+    _maxWaitTime = 10
 
-    def setMaxAliveTime(self, sec):
-        self._mAliveTime = sec
+    def start(self):
+        self._task()
+
+    def _task(self):
+        print("no implement _task method...")
+
+    def enableInPort(self):
+        self._inPort = Queue()
+
+    def enableOutPort(self):
+        self._outPort = Queue()
+
+    def getFromInPort(self):
+        if self._inPort:
+            return self._inPort.get(timeout=self._maxWaitTime)
+        return None
+
+    def putToOutPort(self, msg):
+        if self._outPort:
+            self._outPort.put(msg)
 
 
 
 class ETaskManager(threading.Thread):
 
-    __taskRunList = []
-    __taskReadyList = []
-    __gcInterval = 1
-    __gcCnt = 0
-    
-    __mRunListLimit = 5
-    __mMaxTaskNums = 20
+    __mLock = threading.Lock()
 
-    __mReadyListMutex = threading.Lock()
-    __mRunListMutex = threading.Lock()
+    __mTaskList = []
+    __mSleepQueue = Queue()
+
+    _DataLinks = {"startTask ID": "endTask"}
+
+    __mMaxTaskNums = 5
+
+    __mELog = getLogger()
+
 
     def __init__(self):
         threading.Thread.__init__(self)
-        self.start()
-
-    def addTask(self, task):
-        if len(self.__taskRunList) + len(self.__taskReadyList) < self.__mMaxTaskNums:
-            self.__addTaskToWaitList(task)
+        self.__mELog = getLogger(type(self))
 
     def run(self):
+
         while True:
-            time.sleep(self.__gcInterval)
-            self.__scheduler()
+            
+            time.sleep(1)
 
-            if len(self.__taskRunList) == 0:
-                self.__gcInterval = 5
+            for task in self.__mTaskList:
+
+                outPort = self.getOutPort(task._task)
+                
+                while outPort and outPort.empty() != True:
+
+                    nextTask = self._DataLinks[id(task._task)]
+
+                    inPort = self.getInPort(nextTask)
+
+                    if inPort:
+                        data = outPort.get()
+                        inPort.put(data)
+                        self.__mELog.info("data link: %s --(%s)--> %s" % (id(data), id(task._task), id(nextTask)))
+                    else:
+                        break
+
+
+                if task._sleep == True:
+                    
+                    self.__mLock.acquire()
+                    self.__mTaskList.remove(task)
+                    self.__mLock.release()
+
+                    task._task.__class__ = ETask
+                    task._task = None
+                    self.__mSleepQueue.put(task)
+                
+    
+    def addTasks(self, tasks=[]):
+
+        if len(tasks) != 0:
+            if len(tasks) == 1:
+                self.addTask(tasks[0])
             else:
-                self.__gcInterval = 1
 
-            self.__tryGC()
-            if len(self.__taskRunList) == 0:
-                time.sleep(5)
+                taskPre = tasks[0]
+                tasks.remove(taskPre)
 
-    def __scheduler(self):
+                self.__mELog.info("task usecase: " + str(tasks))
 
-        while len(self.__taskRunList) < self.__mRunListLimit and len(self.__taskReadyList):
-            task = self.__taskReadyList[0]
-            self.__removeTaskFromWaitList(task)
-            self.__addTaskToRunList(task)
-            task.start()
+                for task in tasks:
+                    self.addTask(taskPre, task)
+                    taskPre = task
 
-    def __tryGC(self):
+    def addTask(self, tPre, tNext=None):
 
-        gcInfo = "try task gc: " +\
-            "gc interval is " + str(self.__gcInterval) +\
-            "; gc cnt = " + str(self.__gcCnt)
-
-        DEFAULT_LOGGER.info(gcInfo)
-
-        for task in self.__taskRunList:
-            if not task.isAlive() or task._mAliveTime < 0:
-                if None != task._mGC:
-                    # start gc listen thread...
-                    _thread.start_new_thread(task._mGC, (task, ))
-                else:
-                    print("task %d: gc function is null" % id(task))
-                self.__removeTaskFromRunList(task)
-                #print("task %d:  removed from taskList" % id(task))
-            else:
-                task._mAliveTime = task._mAliveTime - self.__gcInterval
-
-
-        self.__gcCnt = self.__gcCnt + 1
+        self.__mELog.info("add datalink: %s -> %s" % (id(tPre), id(tNext)))
         
-    def config(self, maxTaskNums=None, runListLimit=None):
-        
-        if maxTaskNums is not None:
-            self.__mMaxTaskNums = maxTaskNums
-        
-        if runListLimit is not None:
-            self.__mRunListLimit = runListLimit
-        
+        _etaskPre = self.__getETask(tPre)
+        _etaskNext = self.__getETask(tNext)
 
-    """ mutex method """
+        self._DataLinks[id(tPre)] = tNext
 
-    def __addTaskToRunList(self, task):
-        self.__mRunListMutex.acquire()
-        self.__taskRunList.append(task)
-        self.__mRunListMutex.release()
+        if id(tNext) not in self._DataLinks:
+            self._DataLinks[id(tNext)] = None
 
-    def __removeTaskFromRunList(self, task):
-        self.__mRunListMutex.acquire()
-        self.__taskRunList.remove(task)
-        self.__mRunListMutex.release()
+        self.__mLock.acquire()
 
-    def __addTaskToWaitList(self, task):
-        self.__mReadyListMutex.acquire()
-        self.__taskReadyList.append(task)
-        self.__mReadyListMutex.release()
+        if _etaskPre:
+            self.__mTaskList.append(_etaskPre)
+        if _etaskNext:
+            self.__mTaskList.append(_etaskNext)
 
-    def __removeTaskFromWaitList(self, task):
-        self.__mReadyListMutex.acquire()
-        self.__taskReadyList.remove(task)
-        self.__mReadyListMutex.release()
+        self.__mLock.release()
+
+    def getInPort(self, etask):
+        if etask:
+            return etask._inPort
+        return None
+
+    def getOutPort(self, etask):
+        if etask:
+            return etask._outPort
+        return None
 
 
-# defualt task manager
-# DEFUALT_TASK_MANAGER = ETaskManager()
+    def __getETask(self, task):
+
+        if task is None:
+            return None
+
+        for et in self.__mTaskList:
+            if et._task == task:
+                return None
+
+        if self.__mSleepQueue.empty() != True or len(self.__mTaskList) + 1 > self.__mMaxTaskNums:
+            _etask = self.__mSleepQueue.get()
+        else:
+            _etask = _ETask()
+            _etask.start()
+
+        _etask._task = task
+
+        self.__mELog.info("add task %s to etask %s " % (id(task), id(_etask)))
+
+        _etask._sleep = False
+
+        return _etask
+
 
 
 if __name__ == "__main__":
