@@ -99,7 +99,7 @@ class ETaskManager(threading.Thread):
 
 
     # thread safe
-    __mTaskSleepQueue = Queue()
+    __mTaskSleepPool = Queue()
     __mTaskReadyQueue = Queue()
 
 
@@ -134,7 +134,7 @@ class ETaskManager(threading.Thread):
             # 2. move sleep task to sleep queue
             for task in sleepTask:
                 self.__mTaskRunList.remove(task)
-                self.__mTaskSleepQueue.put(task)
+                self.__mTaskSleepPool.put(task)
 
 
             # 3. process message cache
@@ -156,7 +156,7 @@ class ETaskManager(threading.Thread):
         return len(self.__mTaskRunList)
 
     def _runTaskNums(self):
-        return self.runTaskNums() + self.__mTaskSleepQueue.qsize()
+        return self.runTaskNums() + self.__mTaskSleepPool.qsize()
                 
     def addTasks(self, tasks=[]):
 
@@ -275,8 +275,8 @@ class ETaskManager(threading.Thread):
             if et._task == task:
                 return et, False
 
-        if not self.__mTaskSleepQueue.empty() or len(self.__mTaskRunList) + 1 > self.__mMaxTaskNums:
-            _etask = self.__mTaskSleepQueue.get()
+        if not self.__mTaskSleepPool.empty() or len(self.__mTaskRunList) + 1 > self.__mMaxTaskNums:
+            _etask = self.__mTaskSleepPool.get()
             self.__processMsgCache(_etask)
         else:
             _etask = _ETask()
@@ -324,24 +324,24 @@ class ETaskManager(threading.Thread):
         # Note: actual cache process nums is less then or equal the var 'cacheProcessNums'
         # because ready task is great than or equal 'self.__mTaskReadyQueue.qsize()'
         # Ready task would be dealing with cache of alloc _ETask from sleep queue  
-        cacheProcessNums = self.__mTaskSleepQueue.qsize() - self.__mTaskReadyQueue.qsize()
+        cacheProcessNums = self.__mTaskSleepPool.qsize() - self.__mTaskReadyQueue.qsize()
 
         while cacheProcessNums > 0:
 
-            task = self.__mTaskSleepQueue.get()
+            task = self.__mTaskSleepPool.get()
             self.__processMsgCache(task)
 
             # Part ETask (~ 1/4)
             if cacheProcessNums % 4:
-                self.__mTaskSleepQueue.put(task)
+                self.__mTaskSleepPool.put(task)
 
             cacheProcessNums -= 1
 
     def __TC(self):
 
-        while self.runTaskNums() / 2 + 1 < self.__mTaskSleepQueue.qsize():
+        while self.runTaskNums() / 2 + 1 < self.__mTaskSleepPool.qsize():
 
-            self.__mTaskSleepQueue.get()
+            self.__mTaskSleepPool.get()
 
             
 
