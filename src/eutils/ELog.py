@@ -1,7 +1,7 @@
 '''
 Author: SPeak Shen
 Date: 2022-02-25 21:32:14
-LastEditTime: 2022-05-03 16:31:00
+LastEditTime: 2022-05-03 19:51:12
 LastEditors: SPeak
 Description: a base log system...
 FilePath: /EasyUtils/src/eutils/ELog.py
@@ -124,12 +124,9 @@ class ELog(LogBase, threading.Thread):
         self.config(logFile=defaultLogFile)
 
     def run(self):
-        i = 0
         while True:
             time.sleep(1)
-            # print(" try print: " + str(i))
             self.tryFlush()
-            i = i + 1
 
     def _print(self, message):
 

@@ -26,8 +26,15 @@ class _ETask(threading.Thread):
 
         while self._alive:
             if self._sleep != True:
-                self._task._ETask__start()
+                
+                try:
+                    if self._task is not None:
+                        self._task._ETask__start()
+                except Exception as e:
+                    DEFAULT_LOGGER.error(" task %s runtime error" % str(self._task))
+
                 self._sleep = True
+
             else:
                 time.sleep(1) # wait task
 
@@ -38,7 +45,7 @@ class ETask():
     __mInPort = None
     __mOutPort = None
 
-    __mMaxWaitTime = 10
+    __mMaxWaitTime = 0x4554 # ET
 
     def etask(self):
         print("method not implement...")
@@ -52,14 +59,30 @@ class ETask():
     def _enableOutPort(self):
         self.__mOutPort = Queue()
 
-    def _receiveMsg(self):
+    def _setMaxWaitTime(self, maxWaitTime):
+        self.__mMaxWaitTime = maxWaitTime
+
+    def _receiveMsg(self, maxWaitTime=None):
+
+        if maxWaitTime is None:
+            maxWaitTime = self.__mMaxWaitTime
+
         if self.__mInPort:
-            return self.__mInPort.get(timeout=self.__mMaxWaitTime)
+            try:
+                msg = self.__mInPort.get(timeout=maxWaitTime)
+            except Exception as e:
+                DEFAULT_LOGGER.warn("%s receive msg timeout." % str(self))
+                raise
+            return msg
         return None
 
-    def _sendMsg(self, msg):
+    def _sendMsg(self, msg, maxWaitTime=None):
+
+        if maxWaitTime is None:
+            maxWaitTime = self.__mMaxWaitTime
+
         if self.__mOutPort:
-            self.__mOutPort.put(msg)
+            self.__mOutPort.put(msg,timeout=maxWaitTime)
 
     def __start(self):
         self.etask()
@@ -70,10 +93,8 @@ class ETaskManager(threading.Thread):
 
     __mLock = threading.Lock()
 
-    # need lock
-    __mTaskRunList = []
-
     # only ETM thread using -- {"startTask ID": "endTask List"}
+    __mTaskRunList = []
     __mDataLinks = {"startTask ID": "endTask List"}
 
 
@@ -100,26 +121,36 @@ class ETaskManager(threading.Thread):
             
             self.__mELog.debug("run task list: "  + str(self.__mTaskRunList))
 
+            sleepTask = []
+
             # 1. check/modify task status and transport msg 
             for task in self.__mTaskRunList:
 
                 self.__msgTransport(task)
 
                 if task._sleep == True:
-                    self.__mTaskRunList.remove(task)
-                    self.__mTaskSleepQueue.put(task)
+                    sleepTask.append(task)
 
-            # 2. process message cache
+            # 2. move sleep task to sleep queue
+            for task in sleepTask:
+                self.__mTaskRunList.remove(task)
+                self.__mTaskSleepQueue.put(task)
+
+
+            # 3. process message cache
             self.__processMsgsCache()
 
-            # 3. try run new task
+            # 4. try run new task
             if self.__mTaskReadyQueue.empty():
                 time.sleep(1)
             else:
                 self.__trypStartNewETask()
 
+            # 5. thread/task collection
+            self.__TC()
+
     def taskNums(self):
-        return self._runTaskNums + self.__mTaskReadyQueue.qsize()
+        return self._runTaskNums() + self.__mTaskReadyQueue.qsize()
 
     def runTaskNums(self):
         return len(self.__mTaskRunList)
@@ -214,17 +245,25 @@ class ETaskManager(threading.Thread):
         if len(tList) == 0:
             return
 
-
         while outPort and not outPort.empty():
+            
+            existInPort = False
 
             for nextTask in tList:
-
+                
                 inPort = self.__getInPort(nextTask)
 
                 if inPort:
+                    existInPort = True
                     data = outPort.get()
                     inPort.put(data)
                     self.__mELog.debug("data flow: %s --(%s)--> %s" % (id(data), id(task._task), id(nextTask)))
+                else:
+                    self.__mELog.warn("src %s --> dst %s, not found inport in dst" % (str(task._task), str(nextTask)))
+
+            if not existInPort:
+                self.__mELog.warn("[Bug?] src %s --> dst %s, not found inport in dst task list" % (str(task._task), str(tList)))
+                break
 
 
     def __allocAndBindETask(self, task):
@@ -272,8 +311,13 @@ class ETaskManager(threading.Thread):
 
     def __processMsgCache(self, task):
 
-        self.__msgTransport(task)
-        del self.__mDataLinks[id(task._task)]
+        if task._task:
+            self.__msgTransport(task)
+            
+        if id(task._task) in self.__mDataLinks:
+            del self.__mDataLinks[id(task._task)]
+
+        task._task = None
 
     def __processMsgsCache(self):
 
@@ -287,7 +331,18 @@ class ETaskManager(threading.Thread):
             task = self.__mTaskSleepQueue.get()
             self.__processMsgCache(task)
 
+            # Part ETask (~ 1/4)
+            if cacheProcessNums % 4:
+                self.__mTaskSleepQueue.put(task)
+
             cacheProcessNums -= 1
+
+    def __TC(self):
+
+        while self.runTaskNums() / 2 + 1 < self.__mTaskSleepQueue.qsize():
+
+            self.__mTaskSleepQueue.get()
+
             
 
 

@@ -2,7 +2,7 @@
 Author: SPeak
 Date: 2022-05-03 17:40:26
 LastEditors: SPeak
-LastEditTime: 2022-05-03 18:24:09
+LastEditTime: 2022-05-03 22:51:19
 FilePath: /EasyUtils/src/test/MyTestTask.py
 Description: 
  
@@ -20,7 +20,7 @@ class WTask(ETask):
         while i < 5:
             self._sendMsg("hello task " + str(i))
             i = i + 1
-        print("WTask(%s) over" % id(self))
+        print("WTask(%s) over" % str(self))
 
 class RTask(ETask):
 
@@ -30,7 +30,7 @@ class RTask(ETask):
     def etask(self):
         while True:
             try:
-                msg = self._receiveMsg()
+                msg = self._receiveMsg(maxWaitTime=10)
             except:
                 print("\n<------------stop task %s -------------->\n" % str(self))
                 break
