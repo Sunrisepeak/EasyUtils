@@ -1,8 +1,8 @@
 '''
 Author: SPeak Shen
 Date: 2022-02-25 21:32:14
-LastEditTime: 2022-03-09 21:24:28
-LastEditors: SPeak Shen
+LastEditTime: 2022-05-03 16:31:00
+LastEditors: SPeak
 Description: a base log system...
 FilePath: /EasyUtils/src/eutils/ELog.py
 trying to hard.....
@@ -28,35 +28,35 @@ class LogBase(object):
     def __init__(self, id=""):
 
         self._mLogLevelMap = {"error": 0, "warn": 1, "debug": 2, "info": 3}
-        self._mLogLevel = self._mLogLevelMap["error"]
+        self._mLogLevel = self._mLogLevelMap["warn"]
         self.__id = id
 
         self.config(console=True)
 
     def info(self, message):
 
-        if self._mLogLevel <= self._mLogLevelMap["info"]:
+        if self._mLogLevel >= self._mLogLevelMap["info"]:
             message = "[info]: " + str(message)
 
             self._print(message)
 
     def debug(self, message):
 
-        if self._mLogLevel <= self._mLogLevelMap["debug"]:
+        if self._mLogLevel >= self._mLogLevelMap["debug"]:
             message = "[debug]: " + str(message)
 
             self._print(message)
 
     def warn(self, message):
 
-        if self._mLogLevel <= self._mLogLevelMap["warn"]:
+        if self._mLogLevel >= self._mLogLevelMap["warn"]:
             message = "[warn]: " + str(message)
 
             self._print(message)
 
     def error(self, message):
 
-        if self._mLogLevel <= self._mLogLevelMap["error"]:
+        if self._mLogLevel >= self._mLogLevelMap["error"]:
             message = "[error]: " + str(message)
 
             self._print(message)
@@ -100,7 +100,7 @@ class LogBase(object):
 
     def __configLogLevel(self, logLevel):
 
-        print("method no implement...")
+        self._mLogLevel = logLevel
 
 
 class ELog(LogBase, threading.Thread):
@@ -126,7 +126,7 @@ class ELog(LogBase, threading.Thread):
     def run(self):
         i = 0
         while True:
-            time.sleep(2)
+            time.sleep(1)
             # print(" try print: " + str(i))
             self.tryFlush()
             i = i + 1
