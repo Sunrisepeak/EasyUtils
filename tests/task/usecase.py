@@ -1,10 +1,10 @@
 '''
 Author: SPeak Shen
 Date: 2022-02-25 21:34:48
-LastEditTime: 2022-05-03 17:53:39
+LastEditTime: 2022-05-04 17:36:52
 LastEditors: SPeak
 Description: 
-FilePath: /EasyUtils/test/task/multi_to_one.py
+FilePath: /EasyUtils/tests/task/usecase.py
 trying to hard.....
 '''
 
@@ -19,16 +19,22 @@ sys.path.append(
 from src.eutils import ETask
 from src.eutils import ETaskManager
 
-from src.test import WTask, RTask
+from src.test import WTask, RTask, RWTask
 
 
 # set log level to observer run status
-tm = ETaskManager(lLevel=0)
+tm = ETaskManager()
 tm.start()
 
-rt = RTask()
+# usecase
+tasks = []
+tasks.append(WTask())
+for i in range(0, 8):
+    tasks.append(RWTask())
+tasks.append(RTask())
 
-tm.addTask(WTask(), rt)
-tm.addTask(WTask(), rt)
-tm.addTask(WTask(), rt)
-tm.addTask(WTask(), rt)
+print(str(tasks))
+
+tm.addTasks(tasks)
+
+

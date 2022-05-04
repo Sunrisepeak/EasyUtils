@@ -1,10 +1,10 @@
 '''
 Author: SPeak Shen
 Date: 2022-02-28 20:59:08
-LastEditTime: 2022-03-09 21:23:44
-LastEditors: SPeak Shen
+LastEditTime: 2022-05-04 15:29:56
+LastEditors: SPeak
 Description: 
-FilePath: /EasyUtils/test/testLog.py
+FilePath: /EasyUtils/tests/elog/func_test.py
 trying to hard.....
 '''
 
@@ -19,12 +19,13 @@ sys.path.append(
 
 from src.eutils import ELog
 from src.eutils import getLogger
-from src.eutils import DEFAULT_LOGGER
+
+gLogger = getLogger("ELog Test")
 
 def printLog(level, logger=None):
 
     if logger is None:
-        logger = DEFAULT_LOGGER
+        logger = gLogger
 
     info = "%s %s" % (sys._getframe().f_code.co_filename, sys._getframe(0).f_code.co_name)
 
@@ -60,7 +61,7 @@ if __name__ == "__main__":
 
     _thread.start_new_thread(printLog, (0, myLogger))
     _thread.start_new_thread(printLog, (1, myLogger))
-    _thread.start_new_thread(printLog, (2, DEFAULT_LOGGER))
+    _thread.start_new_thread(printLog, (2, gLogger))
     _thread.start_new_thread(printLog, (3, myLogger))
 
     time.sleep(10)

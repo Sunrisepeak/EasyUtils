@@ -1,7 +1,7 @@
 '''
 Author: SPeak Shen
 Date: 2022-02-25 21:32:14
-LastEditTime: 2022-05-03 19:51:12
+LastEditTime: 2022-05-04 19:54:35
 LastEditors: SPeak
 Description: a base log system...
 FilePath: /EasyUtils/src/eutils/ELog.py
@@ -63,7 +63,7 @@ class LogBase(object):
 
     def _print(self, message):
 
-        print("method no implement...")
+        raise Exception("method no implement...")
 
     def _formatLogMessage(self, message):
         timeInfo = time.strftime("%Y-%m-%d %H:%M:%S", time.localtime())
@@ -86,16 +86,12 @@ class LogBase(object):
 
     def __configLogFile(self, logFile):
 
-        print(logFile)
-
         try:
             self._mOutputFile = open(logFile, 'a+')
 
-            #print("open file %s success" % logFile)
+        except Exception as e:
 
-        except Exception:
-
-            print("open file %s filed..." % logFile)
+            raise Exception("open file %s failed [%s]" % (logFile, str(e)))
 
 
     def __configLogLevel(self, logLevel):
@@ -117,11 +113,6 @@ class ELog(LogBase, threading.Thread):
         self.__mInputQueue = Queue()
         self.__mOutputQueue = Queue()
 
-        # gen default log file
-        timeInfo = time.strftime("%Y-%m-%d", time.localtime())
-        defaultLogFile = os.getcwd() + "/eutils-" + timeInfo + "_" + ".elog.log"
-        
-        self.config(logFile=defaultLogFile)
 
     def run(self):
         while True:
@@ -143,17 +134,15 @@ class ELog(LogBase, threading.Thread):
                 print(logInfo)
 
             if self._mOutputFile is not None:
-                # print("debug log file print....")
 
                 try:
 
                     self._mOutputFile.write(logInfo + "\n")
 
-                except Exception:
+                except Exception as e:
 
-                    print("log output file filed....")
-            else:
-                self.config(logFile=self._mOutputFile)
+                    raise Exception("write log to file failed [%s]" % str(e))
+                
 
         if self._mOutputFile is not None:
             self._mOutputFile.flush()
@@ -173,26 +162,24 @@ class ELog(LogBase, threading.Thread):
         # self.qLock.release()
 
 
-DEFAULT_LOGGER = None
-
-def getLogger(logID=""):
+def getLogger(logID="", console=True, logLevel=1, autoCreateLogFile=False):
 
     log = ELog(logID)
 
-    if DEFAULT_LOGGER is None:
+    log.config(logLevel=logLevel)
 
-        log.config(console=False)
+    log.config(console)
 
-        log.info("default log system init.....")
+    if autoCreateLogFile:
+        timeInfo = time.strftime("%Y-%m-%d", time.localtime())
+        defaultLogFile = os.getcwd() + "/eutils-" + timeInfo + "_" + ".elog.log"
+        self.config(logFile=defaultLogFile)
 
     log.info("logger [%s] init done." % logID)
 
     log.start()
 
     return log
-
-
-DEFAULT_LOGGER = getLogger("Easy Utils")
 
 """ ----------------------------------------- Test Code ----------------------------------------- """
 
@@ -208,7 +195,7 @@ sys._getframe().f_lineno            #当前行号
 def printLog(level, logger=None):
 
     if logger is None:
-        logger = DEFAULT_LOGGER
+        logger = __ETMLogger
 
     info = "%s %s" % (sys._getframe().f_code.co_filename, sys._getframe(0).f_code.co_name)
 

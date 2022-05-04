@@ -22,7 +22,7 @@ from src.eutils import ETaskManager
 from src.test import WTask, RTask
 
 # set log level to observer run status
-tm = ETaskManager(lLevel=0)
+tm = ETaskManager(logLevel=0)
 tm.start()
 
 rt = RTask()

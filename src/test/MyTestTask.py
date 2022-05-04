@@ -2,7 +2,7 @@
 Author: SPeak
 Date: 2022-05-03 17:40:26
 LastEditors: SPeak
-LastEditTime: 2022-05-03 22:51:19
+LastEditTime: 2022-05-04 18:02:07
 FilePath: /EasyUtils/src/test/MyTestTask.py
 Description: 
  
@@ -26,13 +26,15 @@ class RTask(ETask):
 
     def __init__(self):
         self._enableInPort()
+        self.__MsgCnt = 0
 
     def etask(self):
         while True:
             try:
                 msg = self._receiveMsg(maxWaitTime=10)
+                self.__MsgCnt += 1
             except:
-                print("\n<------------stop task %s -------------->\n" % str(self))
+                print("\n<------------stop task %s ----- msg cnt %d --------->\n" % (str(self), self.__MsgCnt))
                 break
             print(msg)
 

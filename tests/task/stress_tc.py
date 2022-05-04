@@ -2,8 +2,8 @@
 Author: SPeak
 Date: 2022-05-03 19:54:47
 LastEditors: SPeak
-LastEditTime: 2022-05-03 23:17:22
-FilePath: /EasyUtils/test/task/stress_tc.py
+LastEditTime: 2022-05-04 17:58:30
+FilePath: /EasyUtils/tests/task/stress_tc.py
 Description: 
 
 '''
@@ -22,16 +22,15 @@ from src.eutils import ETaskManager
 from src.test import WTask, RTask
 
 # set log level to observer run status
-tm = ETaskManager(lLevel=0, maxTaskNums=100)
+tm = ETaskManager(maxTaskNums=100)
 tm.start()
 
 rt = RTask()
 
 # test 300 task
 for i in range(0, 150):
-    wt = WTask()
-    tm.addTask(wt, rt)
-    tm.addTask(WTask(), wt) # this is error task pair
+    tm.addTask(WTask(), rt)
+    tm.addTask(WTask(), rt) # this is error task pair
 
 while tm.taskNums() > 1:
     print("TaskManager current task nums is %d" % tm.taskNums())
