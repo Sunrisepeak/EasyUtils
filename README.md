@@ -48,3 +48,4 @@ el.info("Hello ELog")
 ## Other
 
 [HomePage](https://github.com/Sunrisepeak/EasyUtils)
+[PyPi](https://pypi.org/project/EasyUtils-SPeak/)
