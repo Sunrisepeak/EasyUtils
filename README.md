@@ -27,8 +27,8 @@ git clone git@github.com:Sunrisepeak/EasyUtils.git
 ```python
 
 from eutils import getLogger
-el = getLogger("EUtils", logLevel=4)
-el.info("Hello ELog")
+
+getLogger("EUtils", logLevel=4).info("Hello ELog")
 
 
 ```
@@ -41,7 +41,7 @@ el.info("Hello ELog")
 ```
 
 >
-> More Detils: [test code](https://github.com/Sunrisepeak/EasyUtils/tests/) , [demo](https://github.com/Sunrisepeak/EasyUtils/demo)
+> More Detils: [test code](https://github.com/Sunrisepeak/EasyUtils/tree/main/tests/) , [demo](https://github.com/Sunrisepeak/EasyUtils/tree/main/demo)
 >
 
 

@@ -6,9 +6,9 @@ import time
 # Data structure
 from queue import Queue
 
-from .ELog import getLogger
+from .ELog import ELog
 
-_ETMLogger = getLogger("EUTILS::ETaskManager")
+_ETMLogger = ELog("EUTILS::ETaskManager")
 
 class ETask():
 
@@ -159,8 +159,12 @@ class ETaskManager(threading.Thread):
 
         self.__mMaxTaskNums = maxTaskNums
         
-        _ETMLogger.config(logLevel=logLevel)
-        _ETMLogger.config(console=enableLog)  
+        if enableLog:
+            _ETMLogger.config(logLevel=logLevel)
+            _ETMLogger.config(console=enableLog)
+            _ETMLogger.start()
+        else:
+            _ETMLogger.config(logLevel=-1)
 
         # start TC Task
         self.__addTaskAndStart(self.__mETaskCollector)      
