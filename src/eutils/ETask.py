@@ -283,10 +283,11 @@ class ETaskManager(threading.Thread):
         _etaskPre, PBool = self.__allocAndBindETask(tPre)
         _etaskNext, NBool = self.__allocAndBindETask(tNext)
 
-        if _etaskNext and _etaskPre:
-            self.__createDataLink(_etaskPre._task, _etaskNext._task)
-        elif _etaskPre:
-            self.__createDataLink(_etaskPre._task)
+        if PBool or NBool:
+            if _etaskNext and _etaskPre:
+                self.__createDataLink(_etaskPre._task, _etaskNext._task)
+            elif _etaskPre:
+                self.__createDataLink(_etaskPre._task)
         else:
             _ETMLogger.warn("task already exist: <%s, %s>" % (str(tPre), str(tNext)))
 
