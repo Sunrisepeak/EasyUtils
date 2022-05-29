@@ -282,14 +282,9 @@ class ETaskManager(threading.Thread):
         
         _etaskPre, PBool = self.__allocAndBindETask(tPre)
         _etaskNext, NBool = self.__allocAndBindETask(tNext)
-
-        if PBool or NBool:
-            if _etaskNext and _etaskPre:
-                self.__createDataLink(_etaskPre._task, _etaskNext._task)
-            elif _etaskPre:
-                self.__createDataLink(_etaskPre._task)
-        else:
-            _ETMLogger.warn("task already exist: <%s, %s>" % (str(tPre), str(tNext)))
+        
+        if _etaskNext and _etaskPre:
+            self.__createDataLink(_etaskPre._task, _etaskNext._task)
 
         if PBool:
             self.__mTaskRunList.append(_etaskPre)
@@ -313,7 +308,7 @@ class ETaskManager(threading.Thread):
         while not outPort.empty():
             
             existInPort = False
-
+            
             data = outPort.get()
 
             for nextTask in tList:
@@ -356,23 +351,24 @@ class ETaskManager(threading.Thread):
 
         return _etask, True
 
-    def __createDataLink(self, src, dst=None):
+    def __createDataLink(self, src, dst):
 
-        dstID = id(dst)
+        if dst is None or src is None:
+        
+            _ETMLogger.error("create data link failed: task(dst/src) is None.")
 
         if id(src) in self.__mDataLinks:
-            self.__mDataLinks[id(src)].append(dst)
-        else:
-            if dst:
-                self.__mDataLinks[id(src)] = [ dst ]
-            else:
-                self.__mDataLinks[id(src)] = [ ]
-                dstID = '0'
-        
-        if id(dst) not in self.__mDataLinks:
-            self.__mDataLinks[id(dst)] = [ ]
 
-        _ETMLogger.debug("create data link: [%s --> %s]" % (id(src), dstID))
+            if dst not in self.__mDataLinks[id(src)]:
+                self.__mDataLinks[id(src)].append(dst)
+            else:
+                _ETMLogger.warn("task already exist: <%s, %s>" % (str(src), str(dst)))
+        
+        else:
+
+            self.__mDataLinks[id(src)] = [ dst ]
+        
+        _ETMLogger.debug("create data link: [%s --> %s]" % (id(src), id(dst)))
 
 
     def __processMsgCache(self, task):
