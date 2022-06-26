@@ -1,5 +1,6 @@
 
 # Base
+import re
 import threading
 import time
 
@@ -12,10 +13,11 @@ _ETMLogger = ELog("EUTILS::ETaskManager")
 
 class ETask():
 
-    __mInPort = None
-    __mOutPort = None
-
     __mMaxWaitTime = 0x4554 # ET
+
+    def __init__(self, inPort=None, outPort=None):
+        self.__mInPort = inPort
+        self.__mOutPort = outPort
 
     def etask(self):
         raise Exception("etask method not implement...")
@@ -71,6 +73,7 @@ class ETask():
 class _ETaskCollector(ETask):
 
     def __init__(self):
+        super().__init__()
         self._enableInPort()
 
     def etask(self):
@@ -78,61 +81,80 @@ class _ETaskCollector(ETask):
         releaseTaskCnt = 0
         while True:
 
-            if self.inPortMsgNumbers() > 0:
 
+            releaseQ = Queue()
+
+            while self.inPortMsgNumbers() > 0:
                 releaseTaskCnt += 1
 
                 task = self._receiveMsg()
-
+                
                 _ETMLogger.debug("[%d] TC Start Release %s" % (releaseTaskCnt, str(task)))
+                
+                task._alive = False
+                task._task = None
+                task.wake()
+                
+                releaseQ.put(task)
 
-                self.__releaseETaskResource(task)
-
-                _ETMLogger.debug("[%d] Release over" % releaseTaskCnt)
+            if not releaseQ.empty():
+                self.__releaseETaskResource(releaseQ)
+                _ETMLogger.debug("[%d] TC Release over" % releaseTaskCnt)
             
-            else:
+            time.sleep(1)
 
-                time.sleep(1)
+        _ETMLogger.error("End ETask Collector")
                 
     
-    def __releaseETaskResource(self, task):
-        task._alive = False
-        maxCheckCnt = 10
-        while task.isAlive() and maxCheckCnt > 0:
-            time.sleep(1)
-            maxCheckCnt -= 1
-        del task
+    def __releaseETaskResource(self, releaseQ):
+
+        while not releaseQ.empty():
+            task = releaseQ.get()
+            maxCheckCnt = 10
+            while task.isAlive() and maxCheckCnt > 0:
+                time.sleep(1)
+                maxCheckCnt -= 1
+            del task
 
 
 # user should not to use it directly, but to implement ETask
 class _ETask(threading.Thread):
 
-    # life circle control
-    _sleep = True
-    _alive = True
-
-    # actual task
-    _task = None
-
     def __init__(self, task=None):
         threading.Thread.__init__(self)
         self._task = task
+        # life circle control
+        self._alive = True
+        self.__event = threading.Event()
 
     def run(self):
 
         while self._alive:
-            if self._sleep != True:
-                
-                try:
-                    if self._task is not None:
-                        self._task._ETask__start()
-                except Exception as e:
-                    _ETMLogger.error(" task %s runtime error, %s" % (str(self._task), str(e)))
 
-                self._sleep = True
+            self.__event.clear()
+            self.__event.wait()
 
-            else:
-                time.sleep(1) # wait task
+            _ETMLogger.debug(str(self._task) + ": start")
+
+            try:
+                if self._task is not None:
+                    self._task._ETask__start()
+            except Exception as e:
+                _ETMLogger.error(" task %s runtime error, %s" % (str(self._task), str(e)))
+
+            _ETMLogger.debug(str(self._task) + ": end")
+
+
+
+    def wake(self):
+        _ETMLogger.debug("wake: (event, %s) " % str(self.__event))
+        if self.isAlive():
+            self.__event.set()
+        else:
+            _ETMLogger.warn("task %s dead already." % str(self))
+
+    def isSleep(self):
+        return not self.__event.is_set()
 
 
 
@@ -140,24 +162,23 @@ class ETaskManager(threading.Thread):
 
     __mLock = threading.Lock()
 
-    # only ETM thread using -- {"startTask ID": "endTask List"}
-    __mTaskRunList = []
-    __mDataLinks = {"startTask ID": "endTask List"}
-
-    # thread safe
-    __mTaskSleepPool = Queue()
-    __mTaskReadyQueue = Queue()
-
-    # final var
-    __mMaxTaskNums = None
-
-    __mETaskCollector = _ETaskCollector()
-
     def __init__(self, maxTaskNums=5, enableLog=False, logLevel=1):
 
         threading.Thread.__init__(self)
 
+            # only ETM thread using -- {"startTask ID": "endTask List"}
+        self.__mTaskRunList = []
+        self.__mDataLinks = {"startTask ID": "endTask List"}
+
+        # thread safe
+        self.__mTaskSleepPool = Queue()
+        self.__mTaskReadyQueue = Queue()
+
+        # final var
         self.__mMaxTaskNums = maxTaskNums
+
+        self.__mETaskCollector = _ETaskCollector()
+
         
         if enableLog:
             _ETMLogger.config(logLevel=logLevel)
@@ -173,7 +194,7 @@ class ETaskManager(threading.Thread):
 
         while True:
             
-            _ETMLogger.debug("run task list: "  + str(self.__mTaskRunList))
+            _ETMLogger.debug("run task list(size=%s): %s" % (str(len(self.__mTaskRunList)), str(self.__mTaskRunList)))
             
 
             try:
@@ -184,7 +205,8 @@ class ETaskManager(threading.Thread):
 
                     self.__msgTransport(task)
 
-                    if task._sleep == True:
+                    if task.isSleep():
+                        _ETMLogger.debug(str(task) + ":" + str(task._task) + " to sleepQ")
                         sleepTask.append(task)
 
                 # 2. move sleep task to sleep queue
@@ -241,16 +263,16 @@ class ETaskManager(threading.Thread):
         elif tPre is None:
             tPre, tNext = tNext, tPre
         self.__mTaskReadyQueue.put([tPre, tNext])
-        _ETMLogger.debug("add task: <%s, %s>" % (str(tPre), str(tNext)))
+        _ETMLogger.debug("add task: <%s, %s> to readyQ" % (str(tPre), str(tNext)))
 
 
     def __getInPort(self, etask):
-        if etask:
+        if etask and hasattr(etask, '_ETask__mInPort'):
             return etask._ETask__mInPort
         return None
 
     def __getOutPort(self, etask):
-        if etask:
+        if etask and hasattr(etask, '_ETask__mOutPort'):
             return etask._ETask__mOutPort
         return None
 
@@ -268,7 +290,7 @@ class ETaskManager(threading.Thread):
             if self.runTaskNums() + 2 <= self.__mMaxTaskNums:
                 self.__addTaskAndStart(taskPair[0], taskPair[1])
 
-            elif self.runTaskNums() + 1 <= self.__mMaxTaskNums and (id(taskPair[0]) in self.__mDataLinks or taskPair[1] is None):
+            elif self.runTaskNums() + 1 <= self.__mMaxTaskNums and (id(taskPair[0]) in self.__mDataLinks or id(taskPair[1]) in self.__mDataLinks):
                 self.__addTaskAndStart(taskPair[0], taskPair[1])
 
             else:
@@ -293,7 +315,7 @@ class ETaskManager(threading.Thread):
 
     def __msgTransport(self, task):
 
-        _ETMLogger.debug("[%s]: transport msg" % str(task._task))
+        _ETMLogger.debug("[%s]: transport msg (sleep: %s)" % (str(task._task), str(task.isSleep())))
 
         outPort = self.__getOutPort(task._task)
 
@@ -347,7 +369,10 @@ class ETaskManager(threading.Thread):
 
         _ETMLogger.debug("Bind task %s to etask %s " % (id(task), id(_etask)))
 
-        _etask._sleep = False
+        if _etask.isSleep():
+            _etask.wake()
+        else:
+            raise
 
         return _etask, True
 
@@ -367,6 +392,9 @@ class ETaskManager(threading.Thread):
         else:
 
             self.__mDataLinks[id(src)] = [ dst ]
+
+        if id(dst) not in self.__mDataLinks:
+            self.__mDataLinks[id(dst)] = []
         
         _ETMLogger.debug("create data link: [%s --> %s]" % (id(src), id(dst)))
 
@@ -410,8 +438,7 @@ class ETaskManager(threading.Thread):
             
 
     def __releaseETask(self, task):
-        
-        task._alive = False
+
         self.__getInPort(self.__mETaskCollector).put(task)
 
             

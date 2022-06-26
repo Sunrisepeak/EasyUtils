@@ -171,9 +171,9 @@ def getLogger(logID="", console=True, logLevel=1, autoCreateLogFile=False):
     log.config(console)
 
     if autoCreateLogFile:
-        timeInfo = time.strftime("%Y-%m-%d", time.localtime())
-        defaultLogFile = os.getcwd() + "/eutils-" + timeInfo + "_" + ".elog.log"
-        self.config(logFile=defaultLogFile)
+        timeInfo = time.strftime("_%Y-%m-%d", time.localtime())
+        defaultLogFile = os.getcwd() + "/eutils-" + logID + timeInfo + "_" + ".elog.log"
+        log.config(logFile=defaultLogFile)
 
     log.info("logger [%s] init done." % logID)
 
